@@ -13,4 +13,4 @@ setup:
 	python3 src/data-setup.py
 
 run:
-	uvicorn src.government-service-api:app --reload --port 8000
+	uvicorn src.government-service-api:app --reload --port 8000 --host 0.0.0.0

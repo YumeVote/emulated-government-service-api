@@ -39,6 +39,9 @@ def read_root():
 
 @app.get("/keys")
 def get_keys():
+    """
+        returns all the public keys of the citizens without revealing the critical details
+    """
     conn = sqlite3.connect('assets/citizen.sql')
     cursor = conn.cursor()
     cursor.execute('SELECT Public_Key FROM Citizen')
