@@ -1,1 +1,6 @@
 fastapi
+sqlalchemy
+python-dotenv
+cryptography
+requests
+uvicorn
