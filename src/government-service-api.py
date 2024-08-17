@@ -6,13 +6,19 @@ This script exposes API as an emulated service provided by the government
 
 To verify the government is not cheating, the third-party auditors can use maschain blockchain explorer to audit the transaction hash to obtain the latest transaction hash
 """
-
+from cryptography.hazmat.primitives import hashes
+from cryptography.hazmat.primitives.asymmetric import padding
+from cryptography.hazmat.primitives.asymmetric import ec
+from cryptography.hazmat.primitives import serialization
+from cryptography.hazmat.backends import default_backend
+from cryptography.exceptions import InvalidSignature
 from fastapi import FastAPI, HTTPException
 from dotenv import load_dotenv
 
 import sqlite3
 import os
 import requests
+import base64
 
 load_dotenv()
 
@@ -22,6 +28,22 @@ MASCHAIN_CLIENT_ID = os.getenv("MASCHAIN_CLIENT_ID")
 MASCHAIN_CLIENT_SECRET = os.getenv("MASCHAIN_CLIENT_SECRET")
 ORGANIZATION_WALLET_ADDRESS = os.getenv("ORGANIZATION_WALLET_ADDRESS")
 GOVERNMENT_AUDIT_SMART_CONTRACT_ADDRESS = os.getenv("GOVERNMENT_AUDIT_SMART_CONTRACT_ADDRESS")
+
+def verify_signature(public_key_pem, signature, message):
+    # Load the public key
+    public_key = serialization.load_pem_public_key(public_key_pem.encode(), serialization.Encoding.PEM)
+    try:
+        print(public_key)
+        # Verify the signature
+        public_key.verify(
+            base64.b64decode(signature),
+            message.encode(),
+            ec.ECDSA(hashes.SHA256())
+        )
+        return True
+    except Exception as e:
+        print(f"Verification failed: {e}")
+        return False
 
 with open('assets/transactionhash.txt', 'r') as file:
     transaction_hash = file.read()
@@ -56,13 +78,13 @@ def verify_citizen(digitalIdentitySignature: str):
     """
     conn = sqlite3.connect('assets/citizen.sql')
     cursor = conn.cursor()
-    cursor.execute('SELECT COUNT(*) FROM Citizen WHERE DigitalIdentitySignature = ?', (digitalIdentitySignature,))
-    record_exists = cursor.fetchone()[0]
-    
-    if record_exists:
-        return "Citizen exists"
-    else:
-        raise HTTPException(status_code=404, detail="Citizen does not exist")
+    cursor.execute('SELECT Hash, Public_Key FROM Citizen')
+    citizens = cursor.fetchall()
+
+    for citizen in citizens:
+        if verify_signature(citizen[1], digitalIdentitySignature, citizen[0]):
+            return "Citizen is valid"
+    raise HTTPException(status_code=404, detail="Citizen does not exist")
 
 @app.get("/transactionHash")
 def get_transaction_hash():
