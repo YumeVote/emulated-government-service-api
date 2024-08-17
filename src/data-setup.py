@@ -57,7 +57,7 @@ def create_citizen(first_name, last_name, national_id, conn, cursor):
     cursor.execute('''
         INSERT INTO Citizen (First_Name, Last_Name, National_ID, Hash, Private_Key, Public_Key, DigitalIdentitySignature)
         VALUES (?, ?, ?, ?, ?, ?, ?)
-    ''', (candidate_firstname, candidate_lastname, candidate_nationid, candidate_hash, private_pem.decode(), public_pem.decode(), candidate_digitalidentitysignature))
+    ''', (candidate_firstname, candidate_lastname, candidate_nationid, candidate_hash, base64.b64encode(private_pem).decode(), base64.b64encode(public_pem).decode(), candidate_digitalidentitysignature))
 
     conn.commit()
 

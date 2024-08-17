@@ -31,7 +31,8 @@ GOVERNMENT_AUDIT_SMART_CONTRACT_ADDRESS = os.getenv("GOVERNMENT_AUDIT_SMART_CONT
 
 def verify_signature(public_key_pem, signature, message):
     # Load the public key
-    public_key = serialization.load_pem_public_key(public_key_pem.encode(), serialization.Encoding.PEM)
+    public_key_pem = base64.b64decode(public_key_pem)
+    public_key = serialization.load_pem_public_key(public_key_pem, serialization.Encoding.PEM)
     try:
         print(public_key)
         # Verify the signature
