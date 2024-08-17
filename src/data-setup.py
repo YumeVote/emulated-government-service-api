@@ -15,6 +15,56 @@ import sqlite3
 import hashlib
 import os
 import requests
+import base64
+
+def generate_hash(first_name, last_name, national_id):
+    return hashlib.sha256((first_name + last_name + national_id).encode()).hexdigest()
+
+def sign_data(data, private_key):
+    return base64.b64encode(private_key.sign(
+        data.encode(),
+        padding.PSS(
+            mgf=padding.MGF1(hashes.SHA256()),
+            salt_length=padding.PSS.MAX_LENGTH
+        ),
+        hashes.SHA256()
+    )).decode()
+
+def create_citizen(first_name, last_name, national_id, conn, cursor):
+    # Generate RSA private key
+    private_key = rsa.generate_private_key(
+        public_exponent=65537,
+        key_size=2048
+    )
+
+    # Derive the public key from the private key
+    public_key = private_key.public_key()
+
+    # Serialize the private key
+    private_pem = private_key.private_bytes(
+        encoding=serialization.Encoding.PEM,
+        format=serialization.PrivateFormat.PKCS8,
+        encryption_algorithm=serialization.NoEncryption()
+    )
+
+    # Serialize the public key
+    public_pem = public_key.public_bytes(
+        encoding=serialization.Encoding.PEM,
+        format=serialization.PublicFormat.SubjectPublicKeyInfo
+    )
+
+    candidate_firstname = first_name
+    candidate_lastname = last_name
+    candidate_nationid = national_id
+    candidate_hash = generate_hash(candidate_firstname, candidate_lastname, candidate_nationid)
+    candidate_digitalidentitysignature = sign_data(candidate_hash, private_key)
+    # Insert a new citizen into the table
+    cursor.execute('''
+        INSERT INTO Citizen (First_Name, Last_Name, National_ID, Hash, Private_Key, Public_Key, DigitalIdentitySignature)
+        VALUES (?, ?, ?, ?, ?, ?, ?)
+    ''', (candidate_firstname, candidate_lastname, candidate_nationid, candidate_hash, private_pem.decode(), public_pem.decode(), candidate_digitalidentitysignature))
+
+    conn.commit()
 
 load_dotenv()
 
@@ -42,67 +92,14 @@ cursor.execute('''
         Last_Name TEXT,
         National_ID TEXT UNIQUE,
         Hash TEXT,
-        Private_Key TEXT,
-        Public_Key TEXT
+        Private_Key TEXT UNIQUE,
+        Public_Key TEXT UNIQUE,
+        DigitalIdentitySignature TEXT UNIQUE
     )
 ''')
 
-
-# Generate RSA private key
-private_key_1 = rsa.generate_private_key(
-    public_exponent=65537,
-    key_size=2048
-)
-
-# Derive the public key from the private key
-public_key_1 = private_key_1.public_key()
-
-# Serialize the private key
-private_pem_1 = private_key_1.private_bytes(
-    encoding=serialization.Encoding.PEM,
-    format=serialization.PrivateFormat.PKCS8,
-    encryption_algorithm=serialization.NoEncryption()
-)
-
-# Serialize the public key
-public_pem_1 = public_key_1.public_bytes(
-    encoding=serialization.Encoding.PEM,
-    format=serialization.PublicFormat.SubjectPublicKeyInfo
-)
-
-# Insert a new citizen into the table
-cursor.execute('''
-    INSERT INTO Citizen (First_Name, Last_Name, National_ID, Hash, Private_Key, Public_Key)
-    VALUES (?, ?, ?, ?, ?, ?)
-''', ('John', 'Doe', '1234567890', hashlib.sha256(('John' + 'Doe' + '1234567890').encode()).hexdigest(),private_pem_1.decode(), public_pem_1.decode()))
-
-# Generate RSA private key
-private_key_2 = rsa.generate_private_key(
-    public_exponent=65537,
-    key_size=2048
-)
-
-# Derive the public key from the private key
-public_key_2 = private_key_2.public_key()
-
-# Serialize the private key
-private_pem_2 = private_key_2.private_bytes(
-    encoding=serialization.Encoding.PEM,
-    format=serialization.PrivateFormat.PKCS8,
-    encryption_algorithm=serialization.NoEncryption()
-)
-
-# Serialize the public key
-public_pem_2 = public_key_2.public_bytes(
-    encoding=serialization.Encoding.PEM,
-    format=serialization.PublicFormat.SubjectPublicKeyInfo
-)
-
-# Insert a new citizen into the table
-cursor.execute('''
-    INSERT INTO Citizen (First_Name, Last_Name, National_ID, Hash, Private_Key, Public_Key)
-    VALUES (?, ?, ?, ?, ?, ?)
-''', ('James', 'Mak', '43124abcd', hashlib.sha256(('James' + 'Mak' + '43124abcd').encode()).hexdigest(), private_pem_2.decode(), public_pem_2.decode()))
+create_citizen('John', 'Mak', '1234567890', conn, cursor)
+create_citizen('Jane', 'Doe', '0987654321', conn, cursor)
 
 conn.commit()
 
