@@ -58,7 +58,7 @@ def verify_citizen(digitalIdentitySignature: str):
     cursor = conn.cursor()
     cursor.execute('SELECT COUNT(*) FROM Citizen WHERE DigitalIdentitySignature = ?', (digitalIdentitySignature,))
     record_exists = cursor.fetchone()[0]
-
+    
     if record_exists:
         return "Citizen exists"
     else:

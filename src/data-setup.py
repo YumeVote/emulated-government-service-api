@@ -6,7 +6,7 @@ This script does pre-defined data related operations
 4. Generate a hash of all the public keys and audit it onto the blockchain
 """
 
-from cryptography.hazmat.primitives.asymmetric import rsa, padding
+from cryptography.hazmat.primitives.asymmetric import ec, padding
 from cryptography.hazmat.primitives import hashes, serialization
 from cryptography.hazmat.primitives.asymmetric import utils
 from dotenv import load_dotenv
@@ -23,18 +23,13 @@ def generate_hash(first_name, last_name, national_id):
 def sign_data(data, private_key):
     return base64.b64encode(private_key.sign(
         data.encode(),
-        padding.PSS(
-            mgf=padding.MGF1(hashes.SHA256()),
-            salt_length=padding.PSS.MAX_LENGTH
-        ),
-        hashes.SHA256()
+        ec.ECDSA(hashes.SHA256())
     )).decode()
 
 def create_citizen(first_name, last_name, national_id, conn, cursor):
-    # Generate RSA private key
-    private_key = rsa.generate_private_key(
-        public_exponent=65537,
-        key_size=2048
+    # Generate ec private key
+    private_key = ec.generate_private_key(
+        ec.SECP256R1()
     )
 
     # Derive the public key from the private key
