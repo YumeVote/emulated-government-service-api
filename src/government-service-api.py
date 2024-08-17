@@ -7,7 +7,7 @@ This script exposes API as an emulated service provided by the government
 To verify the government is not cheating, the third-party auditors can use maschain blockchain explorer to audit the transaction hash to obtain the latest transaction hash
 """
 
-from fastapi import FastAPI
+from fastapi import FastAPI, HTTPException
 from dotenv import load_dotenv
 
 import sqlite3
@@ -60,9 +60,9 @@ def verify_citizen(digitalIdentitySignature: str):
     record_exists = cursor.fetchone()[0]
 
     if record_exists:
-        return 200
+        return "Citizen exists"
     else:
-        return 404
+        raise HTTPException(status_code=404, detail="Citizen does not exist")
 
 @app.get("/transactionHash")
 def get_transaction_hash():
