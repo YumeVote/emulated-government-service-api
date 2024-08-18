@@ -6,9 +6,11 @@ This script does pre-defined data related operations
 4. Generate a hash of all the public keys and audit it onto the blockchain
 """
 
+import random
 from cryptography.hazmat.primitives.asymmetric import ec, padding
 from cryptography.hazmat.primitives import hashes, serialization
 from cryptography.hazmat.primitives.asymmetric import utils
+from cryptography.hazmat.backends import default_backend
 from dotenv import load_dotenv
 
 import sqlite3
@@ -16,6 +18,7 @@ import hashlib
 import os
 import requests
 import base64
+import sys
 
 def generate_hash(first_name, last_name, national_id):
     return hashlib.sha256((first_name + last_name + national_id).encode()).hexdigest()
@@ -27,11 +30,11 @@ def sign_data(data, private_key):
     )).decode()
 
 def create_citizen(first_name, last_name, national_id, conn, cursor):
-    # Generate ec private key
-    private_key = ec.generate_private_key(
-        ec.SECP256R1()
-    )
+    # Generate a random number
+    random_number = random.randint(0, sys.maxsize)
 
+    # Generate ec private key
+    private_key = ec.derive_private_key(random_number, ec.SECP256R1(), default_backend())
     # Derive the public key from the private key
     public_key = private_key.public_key()
 
@@ -57,7 +60,7 @@ def create_citizen(first_name, last_name, national_id, conn, cursor):
     cursor.execute('''
         INSERT INTO Citizen (First_Name, Last_Name, National_ID, Hash, Private_Key, Public_Key, DigitalIdentitySignature)
         VALUES (?, ?, ?, ?, ?, ?, ?)
-    ''', (candidate_firstname, candidate_lastname, candidate_nationid, candidate_hash, base64.b64encode(private_pem).decode(), base64.b64encode(public_pem).decode(), candidate_digitalidentitysignature))
+    ''', (candidate_firstname, candidate_lastname, candidate_nationid, candidate_hash, str(random_number), base64.b64encode(public_pem).decode(), candidate_digitalidentitysignature))
 
     conn.commit()
 
